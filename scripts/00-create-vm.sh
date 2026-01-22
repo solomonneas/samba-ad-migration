@@ -26,8 +26,14 @@ echo ""
 # Auto-detect VMID if not specified
 if [[ -z "${VMID:-}" ]]; then
     echo "Auto-detecting next available VMID..."
-    VMID=$(pvesh get /cluster/resources --type vm --output-format json 2>/dev/null | \
-           jq -r '.[].vmid' | sort -n | awk 'BEGIN{id=100} {if($1==id)id++} END{print id}')
+    # Get all VMIDs using qm and pct list (no jq required)
+    EXISTING_IDS=$({ qm list 2>/dev/null | awk 'NR>1 {print $1}'; pct list 2>/dev/null | awk 'NR>1 {print $1}'; } | sort -n)
+    VMID=100
+    for id in $EXISTING_IDS; do
+        if [[ "$id" -eq "$VMID" ]]; then
+            VMID=$((VMID + 1))
+        fi
+    done
     echo "Auto-selected VMID: $VMID"
 else
     # Check if manually specified VMID already exists
