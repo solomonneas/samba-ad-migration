@@ -320,6 +320,10 @@ done
 echo ""
 msg_ok "VM is accessible"
 
+# Wait for cloud-init to complete (installs guest agents)
+msg_info "Waiting for cloud-init to complete..."
+ssh $SSH_OPTS "${VM_USER}@${VM_IP}" "cloud-init status --wait" >/dev/null 2>&1 || true
+msg_ok "Cloud-init finished"
 
 # ===========================================
 # Create .env file on VM
