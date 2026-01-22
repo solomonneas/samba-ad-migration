@@ -1,5 +1,13 @@
 # AD File Server Migration Automation
 
+```
+   _____ ___    __  _______  ___       ___    ____
+  / ___//   |  /  |/  / __ )/   |     /   |  / __ \
+  \__ \/ /| | / /|_/ / __  / /| |    / /| | / / / /
+ ___/ / ___ |/ /  / / /_/ / ___ |   / ___ |/ /_/ /
+/____/_/  |_/_/  /_/_____/_/  |_|  /_/  |_/_____/
+```
+
 Automation scripts for migrating a Windows AD file share to a Samba-based Linux VM on Proxmox, with AD domain integration.
 
 ## Features
