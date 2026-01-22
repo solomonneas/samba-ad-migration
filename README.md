@@ -19,17 +19,38 @@ Automation scripts for migrating a Windows AD file share to a Samba-based Linux 
 
 ## Quick Start
 
-### 1. Clone and Configure
+### One-Liner Install (Recommended)
+
+Run this on your Proxmox host for an interactive guided setup:
 
 ```bash
-git clone <repository-url>
-cd fileserver
+bash -c "$(wget -qLO - https://raw.githubusercontent.com/solomonneas/samba-ad-migration/main/samba-ad.sh)"
+```
+
+This will:
+- Prompt for all configuration (domain, IPs, VM specs)
+- Create and start the VM automatically
+- Configure storage, hostname, DNS, and Samba
+- Leave you with one final step: domain join (requires AD admin credentials)
+
+---
+
+### Manual Installation
+
+<details>
+<summary>Click to expand manual steps</summary>
+
+#### 1. Clone and Configure
+
+```bash
+git clone https://github.com/solomonneas/samba-ad-migration.git
+cd samba-ad-migration
 cp .env.example .env
 # Edit .env with your environment values
 nano .env
 ```
 
-### 2. Create VM (on Proxmox host)
+#### 2. Create VM (on Proxmox host)
 
 ```bash
 # Copy scripts to Proxmox host
@@ -54,7 +75,7 @@ Start the VM:
 qm start <VMID>
 ```
 
-### 3. Configure VM (SSH to new VM)
+#### 3. Configure VM (SSH to new VM)
 
 Copy the scripts to the VM and run in order:
 
@@ -72,7 +93,7 @@ sudo ./scripts/03-install-samba.sh
 sudo ./scripts/04-join-domain.sh
 ```
 
-### 4. Migrate Data (from Windows)
+#### 4. Migrate Data (from Windows)
 
 Run the PowerShell script from a Windows machine with access to both the old and new shares:
 
@@ -84,10 +105,13 @@ Run the PowerShell script from a Windows machine with access to both the old and
 .\scripts\05-migrate-data.ps1 -Source "E:\OldFileShare" -ServerName "prox-fileserv"
 ```
 
+</details>
+
 ## Script Overview
 
 | Script | Run On | Purpose |
 |--------|--------|---------|
+| `samba-ad.sh` | Proxmox host | **One-liner installer** - interactive guided setup |
 | `00-create-vm.sh` | Proxmox host | Creates VM with OS and data disks |
 | `01-setup-storage.sh` | New VM | Formats and mounts data disk |
 | `02-prepare-os.sh` | New VM | Sets hostname, DNS, NTP |
