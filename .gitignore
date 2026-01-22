@@ -1,0 +1,16 @@
+# Sensitive configuration
+.env
+*.log
+
+# AI planning files
+CLAUDE.md
+.claude/
+GEMINI.md
+.gemini/
+CODEX.md
+.codex/
+COPILOT.md
+.copilot/
+plan.md
+*.plan.md
+blueprint.md

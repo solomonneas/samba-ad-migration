@@ -1,0 +1,16 @@
+[libdefaults]
+    default_realm = ${DOMAIN_REALM}
+    dns_lookup_realm = false
+    dns_lookup_kdc = true
+
+[realms]
+    ${DOMAIN_REALM} = {
+        kdc = ${DC_PRIMARY}
+        kdc = ${DC_SECONDARY}
+        admin_server = ${DC_PRIMARY}
+        default_domain = ${DOMAIN_REALM}
+    }
+
+[domain_realm]
+    .${DOMAIN_REALM_LOWER} = ${DOMAIN_REALM}
+    ${DOMAIN_REALM_LOWER} = ${DOMAIN_REALM}

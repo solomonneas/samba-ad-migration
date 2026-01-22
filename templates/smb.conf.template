@@ -1,0 +1,29 @@
+[global]
+   workgroup = ${DOMAIN_SHORT}
+   realm = ${DOMAIN_REALM}
+   security = ads
+
+   idmap config * : backend = tdb
+   idmap config * : range = 3000-7999
+   idmap config ${DOMAIN_SHORT} : backend = rid
+   idmap config ${DOMAIN_SHORT} : range = 10000-999999
+
+   winbind use default domain = yes
+   winbind enum users = yes
+   winbind enum groups = yes
+   template shell = /bin/bash
+   template homedir = /home/%U
+
+   vfs objects = acl_xattr
+   map acl inherit = yes
+   store dos attributes = yes
+
+[${SHARE_NAME}]
+   path = ${SHARE_PATH}
+   read only = no
+   guest ok = no
+   valid users = "@${DOMAIN_SHORT}\Domain Users"
+   admin users = "@${DOMAIN_SHORT}\Domain Admins"
+   create mask = 0770
+   directory mask = 0770
+   force group = "${DOMAIN_SHORT}\Domain Users"
