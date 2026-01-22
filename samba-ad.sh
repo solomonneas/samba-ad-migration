@@ -100,7 +100,7 @@ pvesm status | awk 'NR>1 {print "  " $1 " (" $2 ")"}'
 echo ""
 prompt STORAGE_POOL "Storage pool for VM disks" "local-lvm"
 prompt OS_DISK_SIZE "OS disk size" "32G"
-prompt DATA_DISK_SIZE "Data disk size in GB" "2000"
+prompt DATA_DISK_SIZE "Data disk size in GB" "4000"
 
 echo ""
 echo -e "${BLD}${WH}── Network Configuration ──${NC}"
