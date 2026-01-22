@@ -1,12 +1,6 @@
-<h1 align="center">AD File Server Migration Automation</h1>
-
-```
-   _____ ___    __  _______  ___       ___    ____
-  / ___//   |  /  |/  / __ )/   |     /   |  / __ \
-  \__ \/ /| | / /|_/ / __  / /| |    / /| | / / / /
- ___/ / ___ |/ /  / / /_/ / ___ |   / ___ |/ /_/ /
-/____/_/  |_/_/  /_/_____/_/  |_|  /_/  |_/_____/
-```
+<p align="center">
+  <img src="assets/banner.svg" alt="SAMBA AD" width="500">
+</p>
 
 <p align="center">Automation scripts for migrating a Windows AD file share to a Samba-based Linux VM on Proxmox, with AD domain integration.</p>
 
