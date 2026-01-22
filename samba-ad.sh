@@ -210,12 +210,21 @@ msg_ok "Data disk created"
 # Configure Cloud-Init
 # ===========================================
 msg_info "Configuring cloud-init..."
+
+# Generate temporary SSH key for automated setup
+SSH_KEY_DIR="/tmp/samba-ad-setup-$$"
+mkdir -p "$SSH_KEY_DIR"
+ssh-keygen -t ed25519 -f "${SSH_KEY_DIR}/id_ed25519" -N "" -q
+SSH_PUBKEY="${SSH_KEY_DIR}/id_ed25519.pub"
+SSH_PRIVKEY="${SSH_KEY_DIR}/id_ed25519"
+
 qm set "$VMID" --ide2 "${STORAGE_POOL}:cloudinit"
 qm set "$VMID" --ipconfig0 "ip=${VM_IP}/${VM_NETMASK},gw=${VM_GATEWAY}"
 qm set "$VMID" --nameserver "${DC_PRIMARY}"
 qm set "$VMID" --searchdomain "${DOMAIN_REALM,,}"
 qm set "$VMID" --ciuser "$VM_USER"
 qm set "$VMID" --cipassword "$VM_PASSWORD"
+qm set "$VMID" --sshkeys "$SSH_PUBKEY"
 qm set "$VMID" --boot order=scsi0
 qm set "$VMID" --serial0 socket --vga serial0
 msg_ok "Cloud-init configured"
@@ -231,9 +240,10 @@ msg_ok "VM started"
 # Wait for VM to be ready
 # ===========================================
 msg_info "Waiting for VM to boot and become accessible..."
+SSH_OPTS="-o ConnectTimeout=5 -o StrictHostKeyChecking=no -o BatchMode=yes -i ${SSH_PRIVKEY}"
 MAX_WAIT=120
 WAITED=0
-while ! ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no -o BatchMode=yes "${VM_USER}@${VM_IP}" "exit" 2>/dev/null; do
+while ! ssh $SSH_OPTS "${VM_USER}@${VM_IP}" "exit" 2>/dev/null; do
     sleep 5
     WAITED=$((WAITED + 5))
     if [[ $WAITED -ge $MAX_WAIT ]]; then
@@ -241,9 +251,10 @@ while ! ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no -o BatchMode=yes "${
         msg_warn "You may need to configure SSH manually"
         echo ""
         echo -e "${YW}To complete setup manually:${NC}"
-        echo "  1. SSH to ${VM_USER}@${VM_IP}"
+        echo "  1. Access VM via Proxmox console: qm terminal $VMID"
         echo "  2. Download and run setup scripts from:"
         echo "     https://github.com/solomonneas/samba-ad-migration"
+        rm -rf "$SSH_KEY_DIR"
         exit 1
     fi
     echo -ne "\r${BL}[INFO]${NC} Waiting... ${WAITED}s / ${MAX_WAIT}s"
@@ -251,14 +262,19 @@ done
 echo ""
 msg_ok "VM is accessible"
 
+# Enable password authentication for future SSH access
+msg_info "Enabling password SSH authentication..."
+ssh $SSH_OPTS "${VM_USER}@${VM_IP}" "sudo sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config && sudo systemctl restart sshd"
+msg_ok "Password SSH enabled"
+
 # ===========================================
 # Create .env file on VM
 # ===========================================
 msg_info "Creating configuration on VM..."
 
-ssh -o StrictHostKeyChecking=no "${VM_USER}@${VM_IP}" "mkdir -p ~/fileserver"
+ssh $SSH_OPTS "${VM_USER}@${VM_IP}" "mkdir -p ~/fileserver"
 
-cat <<EOF | ssh -o StrictHostKeyChecking=no "${VM_USER}@${VM_IP}" "cat > ~/fileserver/.env"
+cat <<EOF | ssh $SSH_OPTS "${VM_USER}@${VM_IP}" "cat > ~/fileserver/.env"
 DOMAIN_SHORT="$DOMAIN_SHORT"
 DOMAIN_REALM="$DOMAIN_REALM"
 DC_PRIMARY="$DC_PRIMARY"
@@ -287,7 +303,7 @@ msg_ok "Configuration created"
 # Download and run setup scripts
 # ===========================================
 msg_info "Downloading setup scripts..."
-ssh -o StrictHostKeyChecking=no "${VM_USER}@${VM_IP}" bash <<'REMOTE_SCRIPT'
+ssh $SSH_OPTS "${VM_USER}@${VM_IP}" bash <<'REMOTE_SCRIPT'
 cd ~/fileserver
 REPO_URL="https://raw.githubusercontent.com/solomonneas/samba-ad-migration/main"
 mkdir -p scripts templates
@@ -308,15 +324,15 @@ echo ""
 echo -e "${BLD}${WH}── Running Setup Scripts ──${NC}"
 
 msg_info "Setting up storage (01)..."
-ssh -t -o StrictHostKeyChecking=no "${VM_USER}@${VM_IP}" "cd ~/fileserver && echo 'y' | sudo -E ./scripts/01-setup-storage.sh"
+ssh -t $SSH_OPTS "${VM_USER}@${VM_IP}" "cd ~/fileserver && echo 'y' | sudo -E ./scripts/01-setup-storage.sh"
 msg_ok "Storage configured"
 
 msg_info "Preparing OS (02)..."
-ssh -t -o StrictHostKeyChecking=no "${VM_USER}@${VM_IP}" "cd ~/fileserver && sudo -E ./scripts/02-prepare-os.sh"
+ssh -t $SSH_OPTS "${VM_USER}@${VM_IP}" "cd ~/fileserver && sudo -E ./scripts/02-prepare-os.sh"
 msg_ok "OS prepared"
 
 msg_info "Installing Samba (03)..."
-ssh -t -o StrictHostKeyChecking=no "${VM_USER}@${VM_IP}" "cd ~/fileserver && sudo -E ./scripts/03-install-samba.sh"
+ssh -t $SSH_OPTS "${VM_USER}@${VM_IP}" "cd ~/fileserver && sudo -E ./scripts/03-install-samba.sh"
 msg_ok "Samba installed"
 
 # ===========================================
@@ -340,3 +356,6 @@ echo ""
 echo -e "${BLD}After domain join, share will be accessible at:${NC}"
 echo -e "  ${WH}\\\\${VM_NAME}\\${SHARE_NAME}${NC}"
 echo ""
+
+# Cleanup temporary SSH key
+rm -rf "$SSH_KEY_DIR"
