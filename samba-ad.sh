@@ -248,14 +248,9 @@ users:
     shell: /bin/bash
     sudo: ALL=(ALL) NOPASSWD:ALL
     lock_passwd: false
+    passwd: ${PASSWORD_HASH}
     ssh_authorized_keys:
       - ${SSH_PUBKEY_CONTENT}
-chpasswd:
-  expire: false
-  users:
-    - name: ${VM_USER}
-      password: ${PASSWORD_HASH}
-      type: HASH
 ssh_pwauth: true
 runcmd:
   - sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
