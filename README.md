@@ -17,6 +17,8 @@ Automation scripts for migrating a Windows AD file share to a Samba-based Linux 
 - Network connectivity between Proxmox host, new VM, and AD DCs
 - Domain admin credentials for joining
 
+The installer uses Ubuntu 24.04 cloud images and automatically handles cloud-init password authentication quirks.
+
 ## Quick Start
 
 ### One-Liner Install (Recommended)
@@ -184,6 +186,15 @@ wbinfo -t
 wbinfo -u
 ```
 
+### APT lock during setup
+If running scripts manually and cloud-init is still installing packages:
+```bash
+# Wait for cloud-init to finish
+cloud-init status --wait
+
+# Then run your scripts
+```
+
 ### Share not accessible
 ```bash
 # Test Samba config
@@ -199,10 +210,33 @@ smbclient -L localhost -U%
 After successful migration:
 
 1. Update DNS/DHCP to point clients to new server
-2. Update DFS namespace if applicable
+2. Update DFS namespace if applicable (see below)
 3. Configure backup solution for new server
 4. Monitor for access issues during transition period
 5. Decommission old file server after validation
+
+### Updating DFS Namespace
+
+If your drive mappings point to a DFS path, update the target instead of changing GPOs:
+
+```powershell
+# View current DFS targets
+Get-DfsnFolderTarget -Path "\\domain.local\dfs\*"
+
+# Add new server as target
+New-DfsnFolderTarget -Path "\\domain.local\dfs\Shared" -TargetPath "\\newserver\Shared"
+
+# Disable old target (keeps it for rollback)
+Set-DfsnFolderTarget -Path "\\domain.local\dfs\Shared" -TargetPath "\\oldserver\share" -State Offline
+
+# Or remove old target completely
+Remove-DfsnFolderTarget -Path "\\domain.local\dfs\Shared" -TargetPath "\\oldserver\share"
+```
+
+Clients may cache the old target for up to 30 minutes (default TTL). Force refresh:
+```cmd
+dfsutil /pktflush
+```
 
 ## License
 
