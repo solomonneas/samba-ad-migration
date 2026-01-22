@@ -231,6 +231,15 @@ SSH_PRIVKEY="${SSH_KEY_DIR}/id_ed25519"
 # Create custom cloud-init user-data to enable password SSH and set password
 SNIPPET_DIR="/var/lib/vz/snippets"
 mkdir -p "$SNIPPET_DIR"
+
+# Ensure 'local' storage has snippets content type enabled
+CURRENT_CONTENT=$(pvesm status --storage local 2>/dev/null | awk 'NR==2 {print $4}')
+if [[ ! "$CURRENT_CONTENT" =~ snippets ]]; then
+    msg_info "Enabling snippets content type on 'local' storage..."
+    pvesm set local --content "${CURRENT_CONTENT},snippets"
+    msg_ok "Snippets enabled"
+fi
+
 USERDATA_FILE="${SNIPPET_DIR}/samba-ad-${VMID}-user.yaml"
 
 # Hash the password for cloud-init
@@ -248,11 +257,16 @@ users:
     shell: /bin/bash
     sudo: ALL=(ALL) NOPASSWD:ALL
     lock_passwd: false
-    passwd: ${PASSWORD_HASH}
+    passwd: "${PASSWORD_HASH}"
     ssh_authorized_keys:
       - ${SSH_PUBKEY_CONTENT}
 ssh_pwauth: true
+packages:
+  - qemu-guest-agent
+  - spice-vdagent
 runcmd:
+  - systemctl enable --now qemu-guest-agent
+  - systemctl enable --now spice-vdagent
   - sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
   - sed -i 's/^#*KbdInteractiveAuthentication.*/KbdInteractiveAuthentication yes/' /etc/ssh/sshd_config
   - systemctl restart ssh
@@ -285,7 +299,7 @@ msg_info "Waiting for VM to boot and become accessible..."
 ssh-keygen -f "$HOME/.ssh/known_hosts" -R "$VM_IP" 2>/dev/null || true
 
 SSH_OPTS="-o ConnectTimeout=5 -o StrictHostKeyChecking=no -o BatchMode=yes -i ${SSH_PRIVKEY}"
-MAX_WAIT=120
+MAX_WAIT=180
 WAITED=0
 while ! ssh $SSH_OPTS "${VM_USER}@${VM_IP}" "exit" 2>/dev/null; do
     sleep 5
@@ -299,7 +313,6 @@ while ! ssh $SSH_OPTS "${VM_USER}@${VM_IP}" "exit" 2>/dev/null; do
         echo "  2. Download and run setup scripts from:"
         echo "     https://github.com/solomonneas/samba-ad-migration"
         rm -rf "$SSH_KEY_DIR"
-        rm -f "$USERDATA_FILE"
         exit 1
     fi
     echo -ne "\r${BL}[INFO]${NC} Waiting... ${WAITED}s / ${MAX_WAIT}s"
@@ -398,6 +411,7 @@ echo -e "${BLD}After domain join, share will be accessible at:${NC}"
 echo -e "  ${WH}\\\\${VM_NAME}\\${SHARE_NAME}${NC}"
 echo ""
 
-# Cleanup temporary files
+# Cleanup temporary SSH key (user-data kept for VM reboots)
 rm -rf "$SSH_KEY_DIR"
-rm -f "$USERDATA_FILE"
+msg_info "Cloud-init snippet retained at: $USERDATA_FILE"
+msg_info "To remove after setup: rm -f $USERDATA_FILE"
