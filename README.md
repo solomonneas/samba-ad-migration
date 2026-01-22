@@ -1,5 +1,7 @@
 <p align="center">
   <img src="assets/logo.svg" alt="SAMBA AD" width="400">
+  <br><br>
+  <img src="assets/migration-icon.svg" alt="Windows to Linux Migration" width="280">
 </p>
 
 <p align="center">Automation scripts for migrating a Windows AD file share to a Samba-based Linux VM on Proxmox, with AD domain integration.</p>
