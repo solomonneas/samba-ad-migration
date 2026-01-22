@@ -236,15 +236,27 @@ USERDATA_FILE="${SNIPPET_DIR}/samba-ad-${VMID}-user.yaml"
 # Hash the password for cloud-init
 PASSWORD_HASH=$(openssl passwd -6 "$VM_PASSWORD")
 
+# Read the SSH public key
+SSH_PUBKEY_CONTENT=$(cat "$SSH_PUBKEY")
+
+# Create complete user-data (cicustom replaces Proxmox's user-data entirely)
 cat > "$USERDATA_FILE" << CLOUDCFG
 #cloud-config
-ssh_pwauth: true
+users:
+  - name: ${VM_USER}
+    groups: sudo
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    lock_passwd: false
+    ssh_authorized_keys:
+      - ${SSH_PUBKEY_CONTENT}
 chpasswd:
   expire: false
   users:
     - name: ${VM_USER}
       password: ${PASSWORD_HASH}
       type: HASH
+ssh_pwauth: true
 runcmd:
   - sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
   - sed -i 's/^#*KbdInteractiveAuthentication.*/KbdInteractiveAuthentication yes/' /etc/ssh/sshd_config
@@ -255,9 +267,7 @@ qm set "$VMID" --ide2 "${STORAGE_POOL}:cloudinit"
 qm set "$VMID" --ipconfig0 "ip=${VM_IP}/${VM_NETMASK},gw=${VM_GATEWAY}"
 qm set "$VMID" --nameserver "${DC_PRIMARY}"
 qm set "$VMID" --searchdomain "${DOMAIN_REALM,,}"
-qm set "$VMID" --ciuser "$VM_USER"
-qm set "$VMID" --cipassword "$VM_PASSWORD"
-qm set "$VMID" --sshkeys "$SSH_PUBKEY"
+# Note: ciuser/cipassword/sshkeys not used - handled by cicustom user-data above
 qm set "$VMID" --cicustom "user=local:snippets/samba-ad-${VMID}-user.yaml"
 qm set "$VMID" --boot order=scsi0
 qm set "$VMID" --vga qxl
