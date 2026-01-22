@@ -218,6 +218,21 @@ ssh-keygen -t ed25519 -f "${SSH_KEY_DIR}/id_ed25519" -N "" -q
 SSH_PUBKEY="${SSH_KEY_DIR}/id_ed25519.pub"
 SSH_PRIVKEY="${SSH_KEY_DIR}/id_ed25519"
 
+# Create custom cloud-init user-data to enable password SSH
+SNIPPET_DIR="/var/lib/vz/snippets"
+mkdir -p "$SNIPPET_DIR"
+USERDATA_FILE="${SNIPPET_DIR}/samba-ad-${VMID}-user.yaml"
+cat > "$USERDATA_FILE" << 'CLOUDCFG'
+#cloud-config
+ssh_pwauth: true
+chpasswd:
+  expire: false
+runcmd:
+  - sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+  - sed -i 's/^#*KbdInteractiveAuthentication.*/KbdInteractiveAuthentication yes/' /etc/ssh/sshd_config
+  - systemctl restart ssh
+CLOUDCFG
+
 qm set "$VMID" --ide2 "${STORAGE_POOL}:cloudinit"
 qm set "$VMID" --ipconfig0 "ip=${VM_IP}/${VM_NETMASK},gw=${VM_GATEWAY}"
 qm set "$VMID" --nameserver "${DC_PRIMARY}"
@@ -225,9 +240,11 @@ qm set "$VMID" --searchdomain "${DOMAIN_REALM,,}"
 qm set "$VMID" --ciuser "$VM_USER"
 qm set "$VMID" --cipassword "$VM_PASSWORD"
 qm set "$VMID" --sshkeys "$SSH_PUBKEY"
+qm set "$VMID" --cicustom "user=local:snippets/samba-ad-${VMID}-user.yaml"
 qm set "$VMID" --boot order=scsi0
-qm set "$VMID" --serial0 socket --vga serial0
-msg_ok "Cloud-init configured"
+qm set "$VMID" --vga qxl
+qm set "$VMID" --machine q35
+msg_ok "Cloud-init configured (password SSH enabled, SPICE display)"
 
 # ===========================================
 # Start VM
@@ -255,10 +272,11 @@ while ! ssh $SSH_OPTS "${VM_USER}@${VM_IP}" "exit" 2>/dev/null; do
         msg_warn "You may need to configure SSH manually"
         echo ""
         echo -e "${YW}To complete setup manually:${NC}"
-        echo "  1. Access VM via Proxmox console: qm terminal $VMID"
+        echo "  1. Access VM via Proxmox console or SPICE"
         echo "  2. Download and run setup scripts from:"
         echo "     https://github.com/solomonneas/samba-ad-migration"
         rm -rf "$SSH_KEY_DIR"
+        rm -f "$USERDATA_FILE"
         exit 1
     fi
     echo -ne "\r${BL}[INFO]${NC} Waiting... ${WAITED}s / ${MAX_WAIT}s"
@@ -266,10 +284,6 @@ done
 echo ""
 msg_ok "VM is accessible"
 
-# Enable password authentication for future SSH access
-msg_info "Enabling password SSH authentication..."
-ssh $SSH_OPTS "${VM_USER}@${VM_IP}" "sudo sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config && sudo systemctl restart ssh"
-msg_ok "Password SSH enabled"
 
 # ===========================================
 # Create .env file on VM
@@ -361,5 +375,6 @@ echo -e "${BLD}After domain join, share will be accessible at:${NC}"
 echo -e "  ${WH}\\\\${VM_NAME}\\${SHARE_NAME}${NC}"
 echo ""
 
-# Cleanup temporary SSH key
+# Cleanup temporary files
 rm -rf "$SSH_KEY_DIR"
+rm -f "$USERDATA_FILE"
