@@ -1,3 +1,5 @@
+<div align="center">
+
 # AD File Server Migration Automation
 
 ```
@@ -9,6 +11,8 @@
 ```
 
 Automation scripts for migrating a Windows AD file share to a Samba-based Linux VM on Proxmox, with AD domain integration.
+
+</div>
 
 ## Features
 
