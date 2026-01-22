@@ -240,6 +240,10 @@ msg_ok "VM started"
 # Wait for VM to be ready
 # ===========================================
 msg_info "Waiting for VM to boot and become accessible..."
+
+# Remove old host key if exists (in case VM was recreated with same IP)
+ssh-keygen -f "$HOME/.ssh/known_hosts" -R "$VM_IP" 2>/dev/null || true
+
 SSH_OPTS="-o ConnectTimeout=5 -o StrictHostKeyChecking=no -o BatchMode=yes -i ${SSH_PRIVKEY}"
 MAX_WAIT=120
 WAITED=0
@@ -264,7 +268,7 @@ msg_ok "VM is accessible"
 
 # Enable password authentication for future SSH access
 msg_info "Enabling password SSH authentication..."
-ssh $SSH_OPTS "${VM_USER}@${VM_IP}" "sudo sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config && sudo systemctl restart sshd"
+ssh $SSH_OPTS "${VM_USER}@${VM_IP}" "sudo sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config && sudo systemctl restart ssh"
 msg_ok "Password SSH enabled"
 
 # ===========================================
