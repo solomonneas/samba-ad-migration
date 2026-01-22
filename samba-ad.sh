@@ -67,10 +67,20 @@ prompt_password() {
     local var_name="$1"
     local prompt_text="$2"
     local value
+    local value_confirm
 
-    read -srp "$(echo -e "${CY}$prompt_text${NC}: ")" value
-    echo ""
-    eval "$var_name=\"$value\""
+    while true; do
+        read -srp "$(echo -e "${CY}$prompt_text${NC}: ")" value
+        echo ""
+        read -srp "$(echo -e "${CY}Confirm password${NC}: ")" value_confirm
+        echo ""
+        if [[ "$value" == "$value_confirm" ]]; then
+            break
+        else
+            echo -e "${RD}Passwords do not match. Try again.${NC}"
+        fi
+    done
+    printf -v "$var_name" '%s' "$value"
 }
 
 # ===========================================
@@ -218,15 +228,23 @@ ssh-keygen -t ed25519 -f "${SSH_KEY_DIR}/id_ed25519" -N "" -q
 SSH_PUBKEY="${SSH_KEY_DIR}/id_ed25519.pub"
 SSH_PRIVKEY="${SSH_KEY_DIR}/id_ed25519"
 
-# Create custom cloud-init user-data to enable password SSH
+# Create custom cloud-init user-data to enable password SSH and set password
 SNIPPET_DIR="/var/lib/vz/snippets"
 mkdir -p "$SNIPPET_DIR"
 USERDATA_FILE="${SNIPPET_DIR}/samba-ad-${VMID}-user.yaml"
-cat > "$USERDATA_FILE" << 'CLOUDCFG'
+
+# Hash the password for cloud-init
+PASSWORD_HASH=$(openssl passwd -6 "$VM_PASSWORD")
+
+cat > "$USERDATA_FILE" << CLOUDCFG
 #cloud-config
 ssh_pwauth: true
 chpasswd:
   expire: false
+  users:
+    - name: ${VM_USER}
+      password: ${PASSWORD_HASH}
+      type: HASH
 runcmd:
   - sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
   - sed -i 's/^#*KbdInteractiveAuthentication.*/KbdInteractiveAuthentication yes/' /etc/ssh/sshd_config
