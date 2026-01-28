@@ -124,6 +124,7 @@ Run the PowerShell script from a Windows machine with access to both the old and
 | `03-install-samba.sh` | New VM | Installs Samba, generates configs |
 | `04-join-domain.sh` | New VM | Joins AD domain, sets permissions |
 | `05-migrate-data.ps1` | Windows | Robocopy migration |
+| `06-harden-security.sh` | New VM | SNMP monitoring, audit logging, SMB3 hardening |
 
 ## Configuration Reference
 

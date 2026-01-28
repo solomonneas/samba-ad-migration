@@ -1,0 +1,3 @@
+# Rsyslog configuration for Samba audit logging
+# Routes full_audit messages to dedicated log file
+local5.notice /var/log/samba/audit.log

@@ -100,6 +100,7 @@ prompt VM_NETMASK "Netmask (CIDR)" "24"
 prompt VM_GATEWAY "Gateway IP"
 prompt VM_CORES "CPU cores" "4"
 prompt VM_RAM "RAM in MB" "8192"
+prompt VM_SWAP "Swap size (e.g., 2G, 4G, 0 to disable)" "2G"
 
 echo ""
 echo -e "${BLD}${WH}── Storage Configuration ──${NC}"
@@ -141,7 +142,7 @@ echo -e "${BLD}Configuration Summary:${NC}"
 echo -e "  Domain:      ${WH}$DOMAIN_SHORT${NC} (${DOMAIN_REALM})"
 echo -e "  DCs:         ${WH}$DC_PRIMARY${NC}${DC_SECONDARY:+, $DC_SECONDARY}"
 echo -e "  VM:          ${WH}$VM_NAME${NC} @ ${VM_IP}/${VM_NETMASK}"
-echo -e "  Resources:   ${WH}${VM_CORES}${NC} cores, ${WH}${VM_RAM}${NC} MB RAM"
+echo -e "  Resources:   ${WH}${VM_CORES}${NC} cores, ${WH}${VM_RAM}${NC} MB RAM, ${WH}${VM_SWAP}${NC} swap"
 echo -e "  Storage:     ${WH}${OS_DISK_SIZE}${NC} OS + ${WH}${DATA_DISK_SIZE}G${NC} data on ${STORAGE_POOL}"
 echo -e "  Network:     ${WH}${BRIDGE}${NC}${VLAN_TAG:+ (VLAN $VLAN_TAG)}${ENABLE_FIREWALL:+ [Firewall: $ENABLE_FIREWALL]}"
 echo -e "  Share:       ${WH}\\\\${VM_NAME}\\${SHARE_NAME}${NC} → ${SHARE_PATH}"
@@ -261,6 +262,13 @@ users:
     ssh_authorized_keys:
       - ${SSH_PUBKEY_CONTENT}
 ssh_pwauth: true
+$(if [[ "$VM_SWAP" != "0" ]]; then cat << SWAPBLOCK
+swap:
+  filename: /swap.img
+  size: ${VM_SWAP}
+  maxsize: ${VM_SWAP}
+SWAPBLOCK
+fi)
 packages:
   - qemu-guest-agent
   - spice-vdagent
@@ -344,6 +352,7 @@ VM_NETMASK="$VM_NETMASK"
 VM_GATEWAY="$VM_GATEWAY"
 VM_CORES="$VM_CORES"
 VM_RAM="$VM_RAM"
+VM_SWAP="$VM_SWAP"
 BRIDGE="$BRIDGE"
 VLAN_TAG="$VLAN_TAG"
 FIREWALL_ENABLED="$ENABLE_FIREWALL"
@@ -369,8 +378,11 @@ wget -q "${REPO_URL}/scripts/01-setup-storage.sh" -O scripts/01-setup-storage.sh
 wget -q "${REPO_URL}/scripts/02-prepare-os.sh" -O scripts/02-prepare-os.sh
 wget -q "${REPO_URL}/scripts/03-install-samba.sh" -O scripts/03-install-samba.sh
 wget -q "${REPO_URL}/scripts/04-join-domain.sh" -O scripts/04-join-domain.sh
+wget -q "${REPO_URL}/scripts/06-harden-security.sh" -O scripts/06-harden-security.sh
 wget -q "${REPO_URL}/templates/smb.conf.template" -O templates/smb.conf.template
 wget -q "${REPO_URL}/templates/krb5.conf.template" -O templates/krb5.conf.template
+wget -q "${REPO_URL}/templates/snmpd.conf.template" -O templates/snmpd.conf.template
+wget -q "${REPO_URL}/templates/samba-audit.conf.template" -O templates/samba-audit.conf.template
 chmod +x scripts/*.sh
 REMOTE_SCRIPT
 msg_ok "Scripts downloaded"
@@ -407,9 +419,15 @@ echo -e "  Hostname: ${WH}$VM_NAME${NC}"
 echo -e "  IP:       ${WH}$VM_IP${NC}"
 echo -e "  User:     ${WH}$VM_USER${NC}"
 echo ""
-echo -e "${BLD}${YW}Final Step - Join the domain:${NC}"
+echo -e "${BLD}${YW}Final Steps:${NC}"
 echo -e "  ssh ${VM_USER}@${VM_IP}"
-echo -e "  cd ~/fileserver && sudo ./scripts/04-join-domain.sh"
+echo -e "  cd ~/fileserver"
+echo ""
+echo -e "  ${WH}1.${NC} Join the domain:"
+echo -e "     sudo ./scripts/04-join-domain.sh"
+echo ""
+echo -e "  ${WH}2.${NC} Apply security hardening (SNMP, audit logging):"
+echo -e "     sudo ./scripts/06-harden-security.sh"
 echo ""
 echo -e "${BLD}After domain join, share will be accessible at:${NC}"
 echo -e "  ${WH}\\\\${VM_NAME}\\${SHARE_NAME}${NC}"

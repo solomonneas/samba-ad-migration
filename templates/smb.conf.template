@@ -3,6 +3,11 @@
    realm = ${DOMAIN_REALM}
    security = ads
 
+   # SMB3 Security Hardening
+   server signing = mandatory
+   server min protocol = SMB3
+   smb encrypt = desired
+
    idmap config * : backend = tdb
    idmap config * : range = 3000-7999
    idmap config ${DOMAIN_SHORT} : backend = rid
@@ -14,9 +19,16 @@
    template shell = /bin/bash
    template homedir = /home/%U
 
-   vfs objects = acl_xattr
+   vfs objects = acl_xattr full_audit
    map acl inherit = yes
    store dos attributes = yes
+
+   # Audit logging (file operations logged to /var/log/samba/audit.log)
+   full_audit:prefix = %u|%I|%S
+   full_audit:failure = connect disconnect mkdir rmdir rename unlink write pwrite
+   full_audit:success = connect disconnect mkdir rmdir rename unlink
+   full_audit:facility = local5
+   full_audit:priority = notice
 
 [${SHARE_NAME}]
    path = ${SHARE_PATH}

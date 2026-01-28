@@ -50,6 +50,7 @@ echo "  VMID:        $VMID"
 echo "  VM Name:     $VM_NAME"
 echo "  Cores:       $VM_CORES"
 echo "  RAM:         $VM_RAM MB"
+echo "  Swap:        ${VM_SWAP:-2G}"
 echo "  OS Disk:     $OS_DISK_SIZE"
 echo "  Data Disk:   ${DATA_DISK_SIZE}G"
 echo "  IP:          $VM_IP/$VM_NETMASK"
@@ -104,6 +105,29 @@ qm set "$VMID" --ipconfig0 "ip=${VM_IP}/${VM_NETMASK},gw=${VM_GATEWAY}"
 qm set "$VMID" --nameserver "${DC_PRIMARY}"
 qm set "$VMID" --searchdomain "${DOMAIN_REALM,,}"
 
+# Configure swap via cloud-init snippet if enabled
+VM_SWAP="${VM_SWAP:-2G}"
+if [[ "$VM_SWAP" != "0" ]]; then
+    echo "Configuring swap (${VM_SWAP})..."
+    SNIPPET_DIR="/var/lib/vz/snippets"
+    mkdir -p "$SNIPPET_DIR"
+
+    # Ensure snippets content type is enabled
+    CURRENT_CONTENT=$(pvesm status --storage local 2>/dev/null | awk 'NR==2 {print $4}')
+    if [[ ! "$CURRENT_CONTENT" =~ snippets ]]; then
+        pvesm set local --content "${CURRENT_CONTENT},snippets"
+    fi
+
+    cat > "${SNIPPET_DIR}/samba-ad-${VMID}-user.yaml" << EOF
+#cloud-config
+swap:
+  filename: /swap.img
+  size: ${VM_SWAP}
+  maxsize: ${VM_SWAP}
+EOF
+    qm set "$VMID" --cicustom "user=local:snippets/samba-ad-${VMID}-user.yaml"
+fi
+
 # Set boot order and enable serial console
 qm set "$VMID" --boot order=scsi0
 qm set "$VMID" --serial0 socket --vga serial0
@@ -112,11 +136,21 @@ echo ""
 echo "=== VM Creation Complete ==="
 echo ""
 echo "Next steps:"
-echo "  1. Set cloud-init user/password or SSH key:"
-echo "     qm set $VMID --ciuser <username>"
-echo "     qm set $VMID --cipassword <password>"
-echo "     # OR"
-echo "     qm set $VMID --sshkeys /path/to/authorized_keys"
+if [[ "${VM_SWAP:-2G}" != "0" ]]; then
+    echo "  1. Add credentials to cloud-init snippet:"
+    echo "     Edit /var/lib/vz/snippets/samba-ad-${VMID}-user.yaml"
+    echo "     Add under #cloud-config:"
+    echo "       user: <username>"
+    echo "       password: <password>"
+    echo "       chpasswd: { expire: false }"
+    echo "       ssh_pwauth: true"
+else
+    echo "  1. Set cloud-init user/password or SSH key:"
+    echo "     qm set $VMID --ciuser <username>"
+    echo "     qm set $VMID --cipassword <password>"
+    echo "     # OR"
+    echo "     qm set $VMID --sshkeys /path/to/authorized_keys"
+fi
 echo ""
 echo "  2. Start the VM:"
 echo "     qm start $VMID"
