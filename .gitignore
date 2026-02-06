@@ -1,16 +1,84 @@
-# Sensitive configuration
-.env
-*.log
+# Personal AI context - DO NOT COMMIT
+BOOTSTRAP.md
+SOUL.md
+IDENTITY.md
+USER.md
+AGENTS.md
+HEARTBEAT.md
+TOOLS.md
+SAFETY_RULES.md
+MEMORY.md
+memory/
 
-# AI planning files
-CLAUDE.md
-.claude/
+# OpenClaw files
+.openclaw/
+*.sqlite
+
+# AI Planning/Context (other providers)
 GEMINI.md
 .gemini/
 CODEX.md
 .codex/
 COPILOT.md
 .copilot/
+KIMI.md
+.kimi/
+.cursorrules
+.cursor/
+.continuerules
+.continue/
+.aider*
+.roo/
+.pi/
 plan.md
 *.plan.md
 blueprint.md
+.agents/
+.soul/
+
+# Environment files
+.env
+.env.*
+*.env
+
+# Secrets
+credentials.json
+*-credentials.json
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+.coverage
+htmlcov/
+coverage/
