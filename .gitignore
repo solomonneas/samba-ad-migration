@@ -1,16 +1,49 @@
-# Sensitive configuration
-.env
-*.log
-
-# AI planning files
+# AI/Automation Files - DO NOT COMMIT
 CLAUDE.md
+BOOTSTRAP.md
+SOUL.md
+IDENTITY.md
+USER.md
+AGENTS.md
+HEARTBEAT.md
+TOOLS.md
+SAFETY_RULES.md
+MEMORY.md
+
+# Claude Code project files
 .claude/
-GEMINI.md
-.gemini/
-CODEX.md
-.codex/
-COPILOT.md
-.copilot/
-plan.md
-*.plan.md
-blueprint.md
+
+# OpenClaw files
+.openclaw/
+*.sqlite
+
+# Environment files
+.env
+.env.*
+*.env
+
+# Secrets
+credentials.json
+*-credentials.json
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+FRONTEND_DESIGN.md
+POLISH_NOTES.md

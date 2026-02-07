@@ -215,33 +215,9 @@ smbclient -L localhost -U%
 After successful migration:
 
 1. Update DNS/DHCP to point clients to new server
-2. Update DFS namespace if applicable (see below)
-3. Configure backup solution for new server
+2. Configure backup solution for new server
 4. Monitor for access issues during transition period
 5. Decommission old file server after validation
-
-### Updating DFS Namespace
-
-If your drive mappings point to a DFS path, update the target instead of changing GPOs:
-
-```powershell
-# View current DFS targets
-Get-DfsnFolderTarget -Path "\\domain.local\dfs\*"
-
-# Add new server as target
-New-DfsnFolderTarget -Path "\\domain.local\dfs\Shared" -TargetPath "\\newserver\Shared"
-
-# Disable old target (keeps it for rollback)
-Set-DfsnFolderTarget -Path "\\domain.local\dfs\Shared" -TargetPath "\\oldserver\share" -State Offline
-
-# Or remove old target completely
-Remove-DfsnFolderTarget -Path "\\domain.local\dfs\Shared" -TargetPath "\\oldserver\share"
-```
-
-Clients may cache the old target for up to 30 minutes (default TTL). Force refresh:
-```cmd
-dfsutil /pktflush
-```
 
 ### Client Drive Mapping
 
