@@ -243,6 +243,38 @@ Clients may cache the old target for up to 30 minutes (default TTL). Force refre
 dfsutil /pktflush
 ```
 
+### Client Drive Mapping
+
+Map drives to the new Samba shares on all domain workstations. Two options:
+
+**Option A: GPO Login Script (simple)**
+
+Create `map-drives.bat` and assign via Group Policy (User Config > Policies > Windows Settings > Scripts > Logon):
+
+```batch
+@echo off
+:: Map X: drive - Department Files
+net use X: /delete /yes 2>nul
+net use X: \\fileserv\Department /persistent:yes
+
+:: Map Y: drive - Shared Resources
+net use Y: /delete /yes 2>nul
+net use Y: \\fileserv\Shared /persistent:yes
+```
+
+**Option B: Group Policy Preferences Drive Maps (granular)**
+
+Configure in Group Policy Management (User Config > Preferences > Windows Settings > Drive Maps):
+
+| Drive | Action | Location | Targeting |
+|-------|--------|----------|-----------|
+| X: | Replace | `\\fileserv\Department` | Security Group: Domain Users |
+| Y: | Replace | `\\fileserv\Shared` | Security Group: Domain Users |
+
+GPO Drive Maps support item-level targeting, so you can map different drives per security group, OU, or machine type. Login scripts are simpler to debug but less flexible.
+
+Run `gpupdate /force` on a client to test, or wait for the next policy refresh cycle (~90 minutes).
+
 ## License
 
 MIT
