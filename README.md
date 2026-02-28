@@ -4,7 +4,9 @@
   <img src="assets/flow.svg" alt="Windows to Linux Migration" width="280">
 </p>
 
-<p align="center">Automation scripts for migrating a Windows AD file share to a Samba-based Linux VM on Proxmox, with AD domain integration.</p>
+<p align="center">Automation scripts for migrating a Windows AD file share to a Samba-based Linux VM on Proxmox, with AD domain integration.
+  <a href="https://solomonneas.dev/projects/samba-ad-file-server"><img src="https://img.shields.io/badge/Portfolio-solomonneas.dev-22c55e?style=flat-square" alt="Portfolio" /></a>
+</p>
 
 ## Features
 
